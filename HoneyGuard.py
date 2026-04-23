@@ -1,7 +1,6 @@
 # -*- coding: utf-8 -*-
 # by @pewnie
 # https://discord.gg/79jVdbyazX
-
 import nextcord
 from nextcord.ext import commands
 import json
@@ -10,7 +9,6 @@ import os
 intents = nextcord.Intents.default()
 intents.message_content = True
 intents.members = True
-
 bot = commands.Bot(intents=intents)
 
 CHANNEL_NAME = "not-general"
@@ -54,7 +52,6 @@ async def on_guild_join(guild):
 async def setup_channel(guild):
     data = load_data()
     saved_id = data["channels"].get(str(guild.id))
-
     if saved_id:
         channel = guild.get_channel(saved_id)
         if channel:
@@ -80,17 +77,21 @@ async def setup_channel(guild):
         )
     }
 
-    channel = await guild.create_text_channel(
-        CHANNEL_NAME,
-        overwrites=overwrites,
-        category=None
-    )
-    data["channels"][str(guild.id)] = channel.id
-    save_data(data)
-
-    msg = await channel.send(WARNING_MESSAGE)
-    await msg.pin()
-    print(f"Honeypot created on {guild.name}: #{channel.name}")
+    try:
+        channel = await guild.create_text_channel(
+            CHANNEL_NAME,
+            overwrites=overwrites,
+            category=None
+        )
+        data["channels"][str(guild.id)] = channel.id
+        save_data(data)
+        msg = await channel.send(WARNING_MESSAGE)
+        await msg.pin()
+        print(f"Honeypot created on {guild.name}: #{channel.name}")
+    except nextcord.Forbidden:
+        print(f"[SKIP] Brak perma do tworzenia kanału na: {guild.name} ({guild.id})")
+    except Exception as e:
+        print(f"[ERROR] {guild.name}: {e}")
 
 @bot.event
 async def on_message(message):
@@ -116,17 +117,15 @@ async def on_message(message):
             reason="Wrote in honeypot channel (not-general)",
             delete_message_seconds=86400
         )
-
         data = load_data()
         data["total_bans"] += 1
         save_data(data)
-
         await update_status()
         print(f"Banned: {member} on {guild.name} | Total: {data['total_bans']}")
     except nextcord.Forbidden:
         print(f"Missing permissions to ban {member} on {guild.name}")
     except Exception as e:
-        print(f"Error: {e}")
+        print(f"[ERROR] {e}")
 
 @bot.slash_command(name="support", description="Get support server link")
 async def support(interaction: nextcord.Interaction):
@@ -135,5 +134,4 @@ async def support(interaction: nextcord.Interaction):
         ephemeral=True
     )
 
-
-bot.run("PASTE TOKEN HERE")
+bot.run("token here")
